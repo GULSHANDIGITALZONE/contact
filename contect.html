@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="hi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Contact + Admin — Gulshan</title>
+  <style>
+    :root{--bg:#0d1117;--card:#111827;--muted:#9ca3af;--accent:#22d3ee;--radius:12px;color: #e5e7eb}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text,#e5e7eb);padding:24px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
+    .brand{font-weight:800}
+    .admin-btn{background:linear-gradient(135deg,var(--accent),#a78bfa);color:#071023;border:none;padding:10px 12px;border-radius:10px;cursor:pointer}
+    .container{max-width:980px;margin:28px auto}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:20px}
+    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+    label{display:block;font-weight:700;margin-bottom:6px}
+    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#0b1220;color:var(--text);margin-bottom:12px}
+    textarea{min-height:140px}
+    .btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);padding:10px 12px;border-radius:10px;color:var(--text);cursor:pointer}
+    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent));color:#071023}
+    .muted{color:var(--muted);font-size:14px}
+    .admin-panel{display:none}
+    table{width:100%;border-collapse:collapse}
+    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.03);text-align:left}
+    .small{font-size:13px;color:var(--muted)}
+    .top-right{display:flex;gap:8px;align-items:center}
+    .login-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:9999}
+    .modal-card{width:360px;background:var(--card);padding:18px;border-radius:12px}
+    .close-x{float:right;cursor:pointer}
+    .status{margin-top:10px}
+  </style>
+</head>
+<body>
+  <div class="top container">
+    <div class="brand">Gulshan — Contact</div>
+    <div class="top-right">
+      <button id="adminBtn" class="admin-btn">Admin Login</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="grid">
+      <!-- Left: Contact form -->
+      <div class="card">
+        <h2>Contact Form</h2>
+        <p class="muted">User apna name, phone aur long message yahan submit karega. Data backend (MongoDB) pe jayega.</p>
+        <form id="contactForm">
+          <label for="name">Name</label>
+          <input id="name" name="name" required placeholder="Aapka Naam" />
+
+          <label for="phone">Phone</label>
+          <!-- regex simplified and correct -->
+          <input id="phone" name="phone" required placeholder="10-digit phone number" pattern="^[0-9]{7,15}$" />
+
+          <label for="message">Message</label>
+          <textarea id="message" name="message" required placeholder="Lambi message likhe..."></textarea>
+
+          <button type="submit" class="btn primary">Send Message</button>
+          <div id="formStatus" class="status small"></div>
+        </form>
+
+        <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,.04)" />
+        <p class="small muted">Apna Suggession yahan dein.</p>
+      </div>
+
+      <!-- Right: Admin panel (login & messages) -->
+      <div class="card">
+        <div id="adminArea">
+          <h3>Admin Panel</h3>
+          <p class="muted">Login karke latest submissions dekhein.</p>
+
+          <div id="adminLoggedOut">
+            <p class="small muted">Aap admin login karke messages dekh sakte ho.</p>
+            <button id="openLogin" class="btn">Open Login</button>
+          </div>
+
+          <div id="adminLoggedIn" class="admin-panel">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>Messages</strong>
+              <div>
+                <button id="refreshBtn" class="btn">Refresh</button>
+                <button id="logoutBtn" class="btn">Logout</button>
+              </div>
+            </div>
+            <div style="margin-top:12px;overflow:auto;max-height:420px">
+              <table>
+                <thead><tr><th>Name</th><th>Phone</th><th>Message</th><th class="small">Received</th></tr></thead>
+                <tbody id="messagesTbody"><tr><td colspan="4" class="small muted">No messages loaded.</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Login Modal -->
+  <div id="loginModal" class="login-modal" style="display:none">
+    <div class="modal-card">
+      <div style="display:flex;align-items:center;justify-content:space-between">
+        <strong>Admin Login</strong><span id="closeModal" class="close-x">✕</span>
+      </div>
+      <p class="small muted">Use your admin username & password (Basic Auth will be used to call the messages API).</p>
+      <div style="margin-top:10px">
+        <label for="adminUser">Username</label>
+        <input id="adminUser" />
+        <label for="adminPass">Password</label>
+        <input id="adminPass" type="password" />
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button id="loginSubmit" class="btn primary">Login</button>
+          <button id="loginCancel" class="btn">Cancel</button>
+        </div>
+        <div id="loginStatus" class="small status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /********** CONFIG: set your backend URL here **********/
+    const API_BASE = 'http://localhost:5000'; // <-- change to your server
+
+    const qs = (s) => document.querySelector(s);
+
+    // Form submit -> POST to backend
+    const form = qs('#contactForm');
+    const status = qs('#formStatus');
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      status.textContent = 'Sending...';
+      try {
+        const payload = {
+          name: form.name.value.trim(),
+          phone: form.phone.value.trim(),
+          message: form.message.value.trim()
+        };
+        if (!payload.name || !payload.phone || !payload.message) {
+          status.textContent = 'Please fill all fields.'; return;
+        }
+        const res = await fetch(API_BASE + '/api/contact', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        if (!res.ok) {
+          const txt = await res.text().catch(()=>null);
+          throw new Error(txt || 'Server error');
+        }
+        const j = await res.json();
+        if (j.ok || res.status===200) {
+          status.textContent = 'Message sent. Thank you!'; form.reset();
+        } else {
+          status.textContent = 'Send failed.';
+        }
+      } catch (err) {
+        console.error(err);
+        status.textContent = 'Error sending message. Check console.';
+      }
+    });
+
+    // Admin login & fetch messages (Basic Auth)
+    const adminBtn = qs('#adminBtn');
+    const loginModal = qs('#loginModal');
+    const openLogin = qs('#openLogin');
+    const closeModal = qs('#closeModal');
+    const loginCancel = qs('#loginCancel');
+    const loginSubmit = qs('#loginSubmit');
+    const loginStatus = qs('#loginStatus');
+    const adminLoggedIn = qs('#adminLoggedIn');
+    const adminLoggedOut = qs('#adminLoggedOut');
+    const messagesTbody = qs('#messagesTbody');
+    const refreshBtn = qs('#refreshBtn');
+    const logoutBtn = qs('#logoutBtn');
+
+    let currentAuth = null; // base64 string
+
+    function showLoginModal(){ loginModal.style.display='flex'; loginStatus.textContent=''; }
+    function hideLoginModal(){ loginModal.style.display='none'; }
+
+    adminBtn.addEventListener('click', showLoginModal);
+    openLogin.addEventListener('click', showLoginModal);
+    closeModal.addEventListener('click', hideLoginModal);
+    loginCancel.addEventListener('click', hideLoginModal);
+
+    function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    // New: validate credentials by actually fetching messages, and throw on 401
+    async function loadMessagesWithAuth(auth) {
+      const res = await fetch(API_BASE + '/api/messages', {
+        headers: { 'Authorization': 'Basic ' + auth }
+      });
+      if (res.status === 401) {
+        throw new Error('Auth failed');
+      }
+      if (!res.ok) {
+        const txt = await res.text().catch(()=>null);
+        throw new Error('Fetch failed: ' + (txt || res.status));
+      }
+      const data = await res.json();
+      return data;
+    }
+
+    async function login(username, password) {
+      const auth = btoa(username + ':' + password);
+      const messages = await loadMessagesWithAuth(auth); // will throw if 401 or error
+      currentAuth = auth;
+      return messages;
+    }
+
+    function renderMessages(data) {
+      if (!Array.isArray(data) || data.length === 0) {
+        messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">No messages found.</td></tr>';
+        return;
+      }
+      messagesTbody.innerHTML = data.map(m => {
+        const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
+        const safeMsg = (m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        const phone = m.phone || m.email || '';
+        return `<tr><td>${escapeHtml(m.name||'')}</td><td>${escapeHtml(phone)}</td><td style="max-width:360px;white-space:pre-wrap">${safeMsg}</td><td class="small">${when}</td></tr>`;
+      }).join('');
+    }
+
+    async function loadMessages() {
+      if (!currentAuth) return;
+      messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Loading...</td></tr>';
+      try {
+        const data = await loadMessagesWithAuth(currentAuth);
+        renderMessages(data);
+      } catch (err) {
+        console.error(err);
+        messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Error loading messages (see console)</td></tr>';
+        if (err.message && err.message.toLowerCase().includes('auth')) {
+          loginStatus.textContent = 'Auth failed';
+          logout();
+        }
+      }
+    }
+
+    function logout(){ currentAuth = null; adminLoggedIn.style.display='none'; adminLoggedOut.style.display='block'; }
+
+    loginSubmit.addEventListener('click', async () => {
+      const user = qs('#adminUser').value.trim();
+      const pass = qs('#adminPass').value;
+      if (!user || !pass) { loginStatus.textContent = 'Enter credentials'; return; }
+      loginStatus.textContent = 'Logging in...';
+      loginSubmit.disabled = true;
+      try {
+        const messages = await login(user, pass);
+        renderMessages(messages);
+        loginStatus.textContent = '';
+        hideLoginModal();
+        adminLoggedIn.style.display = 'block';
+        adminLoggedOut.style.display = 'none';
+      } catch (err) {
+        console.error('Login error:', err);
+        loginStatus.textContent = 'Login failed — wrong credentials or server error';
+      } finally {
+        loginSubmit.disabled = false;
+      }
+    });
+
+    refreshBtn.addEventListener('click', () => loadMessages());
+    logoutBtn.addEventListener('click', () => { logout(); messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Logged out</td></tr>'; });
+
+    // Allow pressing Enter inside password to submit
+    qs('#adminPass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginSubmit.click(); });
+
+    // initial state
+    adminLoggedIn.style.display='none';
+    adminLoggedOut.style.display='block';
+  </script>
+
+  <!-- Usage notes:
+    1) Set API_BASE to your backend URL.
+    2) Server must implement POST /api/contact and GET /api/messages (protected by Basic Auth).
+    3) Ensure .env ORIGIN matches your Live Server origin (http://127.0.0.1:5500).
+  -->
+</body>
+</html>
