@@ -408,14 +408,12 @@
     adminLoggedOut.style.display='block';
 
     // Allow only + and numbers in phone input
-const phoneInput = document.getElementById('phone');
-
-phoneInput.addEventListener('input', () => {
-  phoneInput.value = phoneInput.value
-    .replace(/[^+\d]/g, '')     // remove all characters except + and digits
-    .replace(/(?!^)\+/g, '');   // allow + only at the beginning
-});
-
+  const phoneRegex = /^(\+\d{1,3}\s?)?\d{6,15}$/;
+  if (!phoneRegex.test(payload.phone)) {
+    status.textContent = 'Please enter a valid phone number (e.g. +91 9876543210 or 9876543210).';
+    showToast('error', 'Invalid phone number. Use +91 9876543210 or 9876543210');
+    return;
+  }
   </script>
 
   <!-- Usage notes:
