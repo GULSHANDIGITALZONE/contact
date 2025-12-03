@@ -154,18 +154,27 @@
         if (!payload.name || !payload.phone || !payload.message) {
           status.textContent = 'Please fill all fields.'; return;
         }
+
+        // send request
         const res = await fetch(API_BASE + '/api/contact', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
         });
-        if (!res.ok) {
-          const txt = await res.text().catch(()=>null);
-          throw new Error(txt || 'Server error');
-        }
-        const j = await res.json();
-        if (j.ok || res.status===200) {
-          status.textContent = 'Message sent. Thank you!'; form.reset();
+
+        // read response text first, then try to parse JSON (handles non-JSON errors too)
+        const text = await res.text().catch(()=>null);
+        let body = null;
+        try { body = text ? JSON.parse(text) : null; } catch(e) { body = null; }
+
+        // success if HTTP 2xx (res.ok) OR server returned success flag
+        if (res.ok || (body && body.success)) {
+          status.textContent = 'Message sent. Thank you!';
+          form.reset();
         } else {
-          status.textContent = 'Send failed.';
+          // show server message if available, else response text, else generic
+          const errMsg = (body && (body.error || body.message)) || text || 'Send failed.';
+          status.textContent = errMsg;
         }
       } catch (err) {
         console.error(err);
@@ -262,11 +271,10 @@
       }
     }
 
-    function logout(){ 
-      currentAuth = null; 
-      adminLoggedIn.style.display='none'; 
+    function logout(){
+      currentAuth = null;
+      adminLoggedIn.style.display='none';
       adminLoggedOut.style.display='block';
-      // Show contact form, hide admin panel
       document.getElementById('contactCard').classList.remove('hidden-card');
       document.getElementById('adminCard').classList.add('hidden-card');
     }
@@ -284,7 +292,6 @@
         hideLoginModal();
         adminLoggedIn.style.display = 'block';
         adminLoggedOut.style.display = 'none';
-        // Toggle: hide contact form, show admin panel
         document.getElementById('contactCard').classList.add('hidden-card');
         document.getElementById('adminCard').classList.remove('hidden-card');
       } catch (err) {
@@ -314,7 +321,6 @@
           console.error('Delete failed', res.status, txt);
           return alert('Delete failed: ' + (txt || res.status));
         }
-        // After successful soft-delete, refresh the current view (do not auto-switch to Deleted)
         loadMessages();
       } catch (err) {
         console.error('Delete error', err);
