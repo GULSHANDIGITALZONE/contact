@@ -110,20 +110,16 @@
       <div id="adminCard" class="card hidden-card">
         <div id="adminArea">
           <h3>Admin Panel</h3>
-          <p class="muted">Login karke latest submissions dekhein.</p>
+          <p class="muted">Last Update <span id="datetime"></span></p>
 
-          <div id="adminLoggedOut">
-            <p class="small muted">Aap admin login karke messages dekh sakte ho.</p>
-            <button id="openLogin" class="btn">Open Login</button>
-          </div>
-
+         
           <div id="adminLoggedIn" class="admin-panel">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <strong>Messages</strong>
               <div>
-                <button id="refreshBtn" class="btn">🔄 Refresh</button>
-                <button id="toggleDeletedBtn" class="btn">🗑️ Deleted</button>
-                <button id="logoutBtn" class="btn">Logout</button>
+                <button style="background-color: rgb(0, 3, 163);" id="refreshBtn" class="btn">🔄 Refresh</button>
+                <button style="background-color: rgb(0, 3, 163);"  id="toggleDeletedBtn" class="btn">🗑️ Deleted</button>
+                <button style="background-color: rgb(255, 0, 0);" id="logoutBtn" class="btn">Logout</button>
               </div>
             </div>
             <div style="margin-top:12px;overflow:auto;max-height:420px">
@@ -144,7 +140,7 @@
       <div style="display:flex;align-items:center;justify-content:space-between">
         <strong>Admin Login</strong><span id="closeModal" class="close-x">✕</span>
       </div>
-      <p class="small muted">Use your admin username & password (Basic Auth will be used to call the messages API).</p>
+      <p class="small muted">Use your admin username & password.</p>
       <div style="margin-top:10px">
         <label for="adminUser">Username</label>
         <input id="adminUser" />
@@ -308,8 +304,8 @@
         const phone = m.phone || m.email || '';
         const id = m._id || m.id || '';
         const actionBtn = showDeleted
-          ? `<button class="btn" onclick="restoreMessage('${id}')">♻️ Restore</button>`
-          : `<button class="btn btn-delete" onclick="deleteMessage('${id}')">🗑️ Delete</button>`;
+          ? `<button style="background-color: green;" class="btn" onclick="restoreMessage('${id}')">♻️ Restore</button>`
+          : `<button style="background-color: rgb(255, 0, 0);"  class="btn btn-delete" onclick="deleteMessage('${id}')">🗑️ Delete</button>`;
         return `<tr>
           <td>${escapeHtml(m.name||'')}</td>
           <td>${escapeHtml(phone)}</td>
@@ -408,11 +404,26 @@
     adminLoggedOut.style.display='block';
 
   </script>
+  <!-- // Latest time ke liye ............................................................................ -->
+  <script>
+  function updateDateTime() {
+    let now = new Date();
 
-  <!-- Usage notes:
-    1) Set API_BASE to your backend URL.
-    2) Server must implement POST /api/contact and GET /api/messages (protected by Basic Auth).
-    3) Ensure .env ORIGIN matches your Live Server origin (http://127.0.0.1:5500).
-  -->
+    let dd = String(now.getDate()).padStart(2, '0');
+    let mm = String(now.getMonth() + 1).padStart(2, '0'); 
+    let yyyy = now.getFullYear();
+
+    let hh = String(now.getHours()).padStart(2, '0');
+    let min = String(now.getMinutes()).padStart(2, '0');
+
+    let formatted = dd + "/" + mm + "/" + yyyy + " : " + hh + ":" + min;
+
+    document.getElementById("datetime").innerText = formatted;
+  }
+
+  updateDateTime(); // page load par set hoga
+</script>
+
+
 </body>
 </html>
