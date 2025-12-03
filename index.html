@@ -42,6 +42,30 @@
       .modal-card{width:90vw;max-width:360px}
     }
   </style>
+
+  <style>
+  .toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.9);
+    background: #16a34a; /* Green */
+    color: white;
+    padding: 14px 22px;
+    border-radius: 10px;
+    font-size: 16px;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 99999;
+    transition: 0.3s ease;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+</style>
+
 </head>
 <body>
 
@@ -59,10 +83,10 @@
   </div>
 
         </h2>
-        <p class="muted">User apna name, phone aur long message yahan submit karega. Data backend (MongoDB) pe jayega.</p>
+        <!-- <p class="muted">User apna name, phone aur long message yahan submit karega. Data backend (MongoDB) pe jayega.</p> -->
         <form id="contactForm">
           <label for="name">Name</label>
-          <input id="name" name="name" required placeholder="Aapka Naam" />
+          <input id="name" name="name" required placeholder="Enter Name" />
 
           <label for="phone">Phone</label>
           <!-- regex simplified and correct -->
@@ -133,6 +157,17 @@
   </div>
 
   <script>
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+
+  setTimeout(() => {
+    t.classList.remove('show');
+  }, 2000); // 2 seconds
+}
+
+    
     /********** CONFIG: set your backend URL here **********/
     const API_BASE = 'https://contact-yhxq.onrender.com'; // backend express server
     console.log('API_BASE:', API_BASE);
@@ -169,8 +204,9 @@
 
         // success if HTTP 2xx (res.ok) OR server returned success flag
         if (res.ok || (body && body.success)) {
-          status.textContent = 'Message received successfully.We will contact you shortly. Thank you!';
+          showToast'Message received successfully.We will contact you shortly. Thank you!';
           form.reset();
+          status.textContent = '';
         } else {
           // show server message if available, else response text, else generic
           const errMsg = (body && (body.error || body.message)) || text || 'Send failed.';
@@ -344,10 +380,7 @@
     adminLoggedOut.style.display='block';
   </script>
 
-  <!-- Usage notes:
-    1) Set API_BASE to your backend URL.
-    2) Server must implement POST /api/contact and GET /api/messages (protected by Basic Auth).
-    3) Ensure .env ORIGIN matches your Live Server origin (http://127.0.0.1:5500).
-  -->
+  <div id="toast" class="toast"></div>
+
 </body>
 </html>
