@@ -406,6 +406,16 @@
     // initial state
     adminLoggedIn.style.display='none';
     adminLoggedOut.style.display='block';
+
+    // Allow only + and numbers in phone input
+const phoneInput = document.getElementById('phone');
+
+phoneInput.addEventListener('input', () => {
+  phoneInput.value = phoneInput.value
+    .replace(/[^+\d]/g, '')     // remove all characters except + and digits
+    .replace(/(?!^)\+/g, '');   // allow + only at the beginning
+});
+
   </script>
 
   <!-- Usage notes:
