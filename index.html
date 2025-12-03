@@ -52,7 +52,7 @@
       <div id="contactCard" class="card">
         <h2>
             <div class="top container">
-    <div class="brand">Contact Form</div>
+    <div class="brand">Developer Contact</div>
     <div class="top-right">
       <button id="adminBtn" class="admin-btn">Admin Login</button>
     </div>
@@ -69,14 +69,14 @@
           <input id="phone" name="phone" required placeholder="10-digit phone number" pattern="^[0-9]{7,15}$" />
 
           <label for="message">Message</label>
-          <textarea id="message" name="message" required placeholder="Lambi message likhe..."></textarea>
+          <textarea id="message" name="message" required placeholder="Please explain in detail in what regard you need help."></textarea>
 
           <button type="submit" class="btn primary">Send Message</button>
           <div id="formStatus" class="status small"></div>
         </form>
 
         <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,.04)" />
-        <p class="small muted">Apna Suggession yahan dein.</p>
+        <p class="small muted">People outside India are requested to include their email ID in the message.</p>
       </div>
 
       <!-- Right: Admin panel (login & messages) -->
@@ -169,7 +169,7 @@
 
         // success if HTTP 2xx (res.ok) OR server returned success flag
         if (res.ok || (body && body.success)) {
-          status.textContent = 'Message sent. Thank you!';
+          status.textContent = 'Message received successfully.We will contact you shortly. Thank you!';
           form.reset();
         } else {
           // show server message if available, else response text, else generic
