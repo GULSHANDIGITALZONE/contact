@@ -1,347 +1,226 @@
 <!doctype html>
-<html lang="hi">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <title>Contact Admin - Inbox & Trash</title>
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Contact Developer</title>
   <style>
-    :root{--bg:#0d1117;--card:#111827;--muted:#9ca3af;--accent:#22d3ee;--radius:12px;color: #e5e7eb}
-    *{box-sizing:border-box}
-    body{margin:0;font-family:Inter,system-ui,Arial;background:var(--bg);color:var(--text,#e5e7eb);padding:24px}
-    .top{display:flex;justify-content:space-between;align-items:center;gap:12px}
-    .brand{font-weight:800}
-    .admin-btn{background:linear-gradient(135deg,var(--accent),#a78bfa);color:#071023;border:none;padding:10px 12px;border-radius:10px;cursor:pointer}
-    .container{max-width:980px;margin:28px auto}
-    .grid{display:grid;grid-template-columns:1fr;gap:20px;max-width:650px;margin:0 auto}
-    .card{background:var(--card);border-radius:var(--radius);padding:18px;box-shadow:0 8px 30px rgba(0,0,0,.4)}
-    label{display:block;font-weight:700;margin-bottom:6px}
-    input,textarea{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.04);background:#0b1220;color:var(--text);margin-bottom:12px}
-    textarea{min-height:140px}
-    .btn{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);padding:10px 12px;border-radius:10px;color:var(--text);cursor:pointer}
-    .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent));color:#071023}
-    .muted{color:var(--muted);font-size:14px}
-    .admin-panel{display:none}
-    table{width:100%;border-collapse:collapse}
-    th,td{padding:10px;border-bottom:1px solid rgba(255,255,255,.03);text-align:left}
-    .small{font-size:13px;color:var(--muted)}
-    .top-right{display:flex;gap:8px;align-items:center}
-    .login-modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:9999}
-    .modal-card{width:360px;background:var(--card);padding:18px;border-radius:12px}
-    .close-x{float:right;cursor:pointer}
-    .status{margin-top:10px}
-    .hidden-card{display:none !important}
-    @media (max-width:600px){
-      body{padding:12px}
-      .container{margin:12px auto}
-      .grid{max-width:100%;margin:0}
-      .card{padding:12px}
-      input,textarea{padding:8px;font-size:16px}
-      table{font-size:12px}
-      th,td{padding:6px}
-      .btn{padding:8px 10px;font-size:12px}
-      .modal-card{width:90vw;max-width:360px}
-    }
+    body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: auto; }
+    header { display:flex; justify-content:space-between; align-items:center; }
+    h1 { margin:0; font-size:20px; }
+    .tabs { margin-top:20px; display:flex; gap:8px; }
+    .tab { padding:8px 12px; border-radius:6px; cursor:pointer; background:#eee; }
+    .tab.active { background:#007bff; color:#fff; }
+    table { width:100%; border-collapse:collapse; margin-top:16px; }
+    th, td { padding:8px; border:1px solid #ddd; text-align:left; vertical-align:top; }
+    .actions button { margin-right:6px; }
+    .small { font-size:12px; color:#666; }
+    .danger { background:#dc3545; color:#fff; border:none; padding:6px 8px; border-radius:4px; cursor:pointer; }
+    .primary { background:#007bff; color:#fff; border:none; padding:6px 8px; border-radius:4px; cursor:pointer; }
+    .muted { background:#6c757d; color:#fff; border:none; padding:6px 8px; border-radius:4px; cursor:pointer; }
+    #messageForm { margin-top:24px; padding:12px; border:1px solid #ddd; border-radius:8px; background:#fafafa;}
+    input, textarea { width:100%; padding:8px; margin-top:6px; margin-bottom:10px; box-sizing:border-box; border-radius:4px; border:1px solid #ccc;}
   </style>
 </head>
 <body>
+  <header>
+    <h1>Contact Admin — Inbox</h1>
+    <div class="small">Server API endpoints: <code>/api/messages</code></div>
+  </header>
 
-
-  <div class="container">
-    <div class="grid">
-      <!-- Left: Contact form -->
-      <div id="contactCard" class="card">
-        <h2>
-            <div class="top container">
-    <div class="brand">Contact Form</div>
-    <div class="top-right">
-      <button id="adminBtn" class="admin-btn">Admin Login</button>
-    </div>
+  <div class="tabs">
+    <div id="tab-inbox" class="tab active" onclick="showTab('inbox')">Inbox</div>
+    <div id="tab-trash" class="tab" onclick="showTab('trash')">Trash</div>
+    <div id="tab-new" class="tab" onclick="showTab('new')">Send Test Message</div>
   </div>
 
-        </h2>
-        <p class="muted">User apna name, phone aur long message yahan submit karega. Data backend (MongoDB) pe jayega.</p>
-        <form id="contactForm">
-          <label for="name">Name</label>
-          <input id="name" name="name" required placeholder="Aapka Naam" />
-
-          <label for="phone">Phone</label>
-          <!-- regex simplified and correct -->
-          <input id="phone" name="phone" required placeholder="10-digit phone number" pattern="^[0-9]{7,15}$" />
-
-          <label for="message">Message</label>
-          <textarea id="message" name="message" required placeholder="Lambi message likhe..."></textarea>
-
-          <button type="submit" class="btn primary">Send Message</button>
-          <div id="formStatus" class="status small"></div>
-        </form>
-
-        <hr style="margin:18px 0;border:none;border-top:1px solid rgba(255,255,255,.04)" />
-        <p class="small muted">Apna Suggession yahan dein.</p>
-      </div>
-
-      <!-- Right: Admin panel (login & messages) -->
-      <div id="adminCard" class="card hidden-card">
-        <div id="adminArea">
-          <h3>Admin Panel</h3>
-          <p class="muted">Login karke latest submissions dekhein.</p>
-
-          <div id="adminLoggedOut">
-            <p class="small muted">Aap admin login karke messages dekh sakte ho.</p>
-            <button id="openLogin" class="btn">Open Login</button>
-          </div>
-
-          <div id="adminLoggedIn" class="admin-panel">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <strong>Messages</strong>
-              <div>
-                <button id="refreshBtn" class="btn">🔄 Refresh</button>
-                <button id="toggleDeletedBtn" class="btn">🗑️ Deleted</button>
-                <button id="logoutBtn" class="btn">Logout</button>
-              </div>
-            </div>
-            <div style="margin-top:12px;overflow:auto;max-height:420px">
-              <table>
-                <thead><tr><th>Name</th><th>Phone</th><th>Message</th><th class="small">Received</th></tr></thead>
-                <tbody id="messagesTbody"><tr><td colspan="4" class="small muted">No messages loaded.</td></tr></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
+  <div id="content-inbox">
+    <table id="inbox-table" aria-live="polite">
+      <thead>
+        <tr><th>From</th><th>Subject / Message</th><th>Received</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
   </div>
 
-  <!-- Login Modal -->
-  <div id="loginModal" class="login-modal" style="display:none">
-    <div class="modal-card">
-      <div style="display:flex;align-items:center;justify-content:space-between">
-        <strong>Admin Login</strong><span id="closeModal" class="close-x">✕</span>
-      </div>
-      <p class="small muted">Use your admin username & password (Basic Auth will be used to call the messages API).</p>
-      <div style="margin-top:10px">
-        <label for="adminUser">Username</label>
-        <input id="adminUser" />
-        <label for="adminPass">Password</label>
-        <input id="adminPass" type="password" />
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button id="loginSubmit" class="btn primary">Login</button>
-          <button id="loginCancel" class="btn">Cancel</button>
-        </div>
-        <div id="loginStatus" class="small status"></div>
-      </div>
+  <div id="content-trash" style="display:none;">
+    <table id="trash-table">
+      <thead>
+        <tr><th>From</th><th>Subject / Message</th><th>Deleted At</th><th>Actions</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <div id="content-new" style="display:none;">
+    <div id="messageForm">
+      <h3>Send test message (saves to DB)</h3>
+      <input id="name" placeholder="Your name" />
+      <input id="email" placeholder="Email (optional)" />
+      <input id="subject" placeholder="Subject (optional)" />
+      <textarea id="message" placeholder="Message" rows="6"></textarea>
+      <button class="primary" onclick="sendTestMessage()">Send</button>
     </div>
   </div>
 
   <script>
-    /********** CONFIG: set your backend URL here **********/
-    const API_BASE = 'https://contact-yhxq.onrender.com'; // backend express server
-    console.log('API_BASE:', API_BASE);
-
-    const qs = (s) => document.querySelector(s);
-
-    // Form submit -> POST to backend
-    const form = qs('#contactForm');
-    const status = qs('#formStatus');
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      status.textContent = 'Sending...';
-      try {
-        const payload = {
-          name: form.name.value.trim(),
-          phone: form.phone.value.trim(),
-          message: form.message.value.trim()
-        };
-        if (!payload.name || !payload.phone || !payload.message) {
-          status.textContent = 'Please fill all fields.'; return;
-        }
-        const res = await fetch(API_BASE + '/api/contact', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-        if (!res.ok) {
-          const txt = await res.text().catch(()=>null);
-          throw new Error(txt || 'Server error');
-        }
-        const j = await res.json();
-        if (j.ok || res.status===200) {
-          status.textContent = 'Message sent. Thank you!'; form.reset();
-        } else {
-          status.textContent = 'Send failed.';
-        }
-      } catch (err) {
-        console.error(err);
-        status.textContent = 'Error sending message. Check console.';
-      }
-    });
-
-    // Admin login & fetch messages (Basic Auth)
-    const adminBtn = qs('#adminBtn');
-    const loginModal = qs('#loginModal');
-    const openLogin = qs('#openLogin');
-    const closeModal = qs('#closeModal');
-    const loginCancel = qs('#loginCancel');
-    const loginSubmit = qs('#loginSubmit');
-    const loginStatus = qs('#loginStatus');
-    const adminLoggedIn = qs('#adminLoggedIn');
-    const adminLoggedOut = qs('#adminLoggedOut');
-    const messagesTbody = qs('#messagesTbody');
-    const refreshBtn = qs('#refreshBtn');
-    const logoutBtn = qs('#logoutBtn');
-
-    let currentAuth = null; // base64 string
-
-    function showLoginModal(){ loginModal.style.display='flex'; loginStatus.textContent=''; }
-    function hideLoginModal(){ loginModal.style.display='none'; }
-
-    adminBtn.addEventListener('click', showLoginModal);
-    openLogin.addEventListener('click', showLoginModal);
-    closeModal.addEventListener('click', hideLoginModal);
-    loginCancel.addEventListener('click', hideLoginModal);
-
-    function escapeHtml(s){ return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
-
-    // New: validate credentials by actually fetching messages, and throw on 401
-    async function loadMessagesWithAuth(auth, showDeleted=false) {
-      const url = API_BASE + '/api/messages' + (showDeleted ? '?deleted=true' : '');
-      const res = await fetch(url, {
-        headers: { 'Authorization': 'Basic ' + auth }
-      });
-      if (res.status === 401) {
-        throw new Error('Auth failed');
-      }
-      if (!res.ok) {
-        const txt = await res.text().catch(()=>null);
-        throw new Error('Fetch failed: ' + (txt || res.status));
-      }
-      const data = await res.json();
-      return data;
+    const API_BASE = '/api/messages'; // server serves on same origin
+    function showTab(tab) {
+      document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+      document.getElementById('tab-' + tab).classList.add('active');
+      document.getElementById('content-inbox').style.display = (tab==='inbox') ? '' : 'none';
+      document.getElementById('content-trash').style.display = (tab==='trash') ? '' : 'none';
+      document.getElementById('content-new').style.display = (tab==='new') ? '' : 'none';
+      if (tab === 'inbox') loadMessages();
+      if (tab === 'trash') loadDeletedMessages();
     }
 
-    async function login(username, password) {
-      const auth = btoa(username + ':' + password);
-      const messages = await loadMessagesWithAuth(auth); // will throw if 401 or error
-      currentAuth = auth;
-      return messages;
-    }
-
-    function renderMessages(data, showDeleted=false) {
-      if (!Array.isArray(data) || data.length === 0) {
-        messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">No messages found.</td></tr>';
-        return;
-      }
-      messagesTbody.innerHTML = data.map(m => {
-        const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : '';
-        const safeMsg = (m.message||'').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        const phone = m.phone || m.email || '';
-        const id = m._id || m.id || '';
-        const actionBtn = showDeleted
-          ? `<button class="btn" onclick="restoreMessage('${id}')">♻️ Restore</button>`
-          : `<button class="btn btn-delete" onclick="deleteMessage('${id}')">🗑️ Delete</button>`;
-        return `<tr>
-          <td>${escapeHtml(m.name||'')}</td>
-          <td>${escapeHtml(phone)}</td>
-          <td style="max-width:360px;white-space:pre-wrap">${safeMsg}</td>
-          <td class="small">${when}<div style="margin-top:6px">${actionBtn}</div></td>
-        </tr>`;
-      }).join('');
-    }
-
-    let showingDeleted = false;
     async function loadMessages() {
-      if (!currentAuth) return;
-      messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Loading...</td></tr>';
       try {
-        const data = await loadMessagesWithAuth(currentAuth, showingDeleted);
-        renderMessages(data, showingDeleted);
+        const res = await fetch(API_BASE);
+        const msgs = await res.json();
+        const tbody = document.querySelector('#inbox-table tbody');
+        tbody.innerHTML = '';
+        if (!Array.isArray(msgs) || msgs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="small">No messages</td></tr>';
+          return;
+        }
+        msgs.forEach(m => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${escapeHtml(m.name)}</strong><div class="small">${escapeHtml(m.email||'')}</div></td>
+            <td><strong>${escapeHtml(m.subject||'')}</strong><div>${escapeHtml(m.message)}</div></td>
+            <td class="small">${new Date(m.createdAt).toLocaleString()}</td>
+            <td class="actions">
+              <button class="muted" onclick="viewMessage('${m._id}')">View</button>
+              <button class="danger" onclick="deleteMessage('${m._id}')">Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (err) {
         console.error(err);
-        messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Error loading messages (see console)</td></tr>';
-        if (err.message && err.message.toLowerCase().includes('auth')) {
-          loginStatus.textContent = 'Auth failed';
-          logout();
-        }
+        alert('Failed to load messages');
       }
     }
 
-    function logout(){ 
-      currentAuth = null; 
-      adminLoggedIn.style.display='none'; 
-      adminLoggedOut.style.display='block';
-      // Show contact form, hide admin panel
-      document.getElementById('contactCard').classList.remove('hidden-card');
-      document.getElementById('adminCard').classList.add('hidden-card');
-    }
-
-    loginSubmit.addEventListener('click', async () => {
-      const user = qs('#adminUser').value.trim();
-      const pass = qs('#adminPass').value;
-      if (!user || !pass) { loginStatus.textContent = 'Enter credentials'; return; }
-      loginStatus.textContent = 'Logging in...';
-      loginSubmit.disabled = true;
+    async function loadDeletedMessages() {
       try {
-        const messages = await login(user, pass);
-        renderMessages(messages);
-        loginStatus.textContent = '';
-        hideLoginModal();
-        adminLoggedIn.style.display = 'block';
-        adminLoggedOut.style.display = 'none';
-        // Toggle: hide contact form, show admin panel
-        document.getElementById('contactCard').classList.add('hidden-card');
-        document.getElementById('adminCard').classList.remove('hidden-card');
+        const res = await fetch(API_BASE + '/deleted');
+        const msgs = await res.json();
+        const tbody = document.querySelector('#trash-table tbody');
+        tbody.innerHTML = '';
+        if (!Array.isArray(msgs) || msgs.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" class="small">No deleted messages</td></tr>';
+          return;
+        }
+        msgs.forEach(m => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td><strong>${escapeHtml(m.name)}</strong><div class="small">${escapeHtml(m.email||'')}</div></td>
+            <td><strong>${escapeHtml(m.subject||'')}</strong><div>${escapeHtml(m.message)}</div></td>
+            <td class="small">${m.deletedAt ? new Date(m.deletedAt).toLocaleString() : ''}</td>
+            <td class="actions">
+              <button class="primary" onclick="restoreMessage('${m._id}')">Restore</button>
+              <button class="danger" onclick="permanentDelete('${m._id}')">Delete Permanently</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
       } catch (err) {
-        console.error('Login error:', err);
-        loginStatus.textContent = 'Login failed — wrong credentials or server error';
-      } finally {
-        loginSubmit.disabled = false;
+        console.error(err);
+        alert('Failed to load deleted messages');
       }
-    });
+    }
 
-    refreshBtn.addEventListener('click', () => loadMessages());
-    // toggle showing deleted items
-    qs('#toggleDeletedBtn').addEventListener('click', () => {
-      showingDeleted = !showingDeleted;
-      qs('#toggleDeletedBtn').textContent = showingDeleted ? '↩️ Active' : '🗑️ Deleted';
-      loadMessages();
-    });
-
-    // Delete and restore helpers
     async function deleteMessage(id) {
-      if (!currentAuth) return alert('Login first');
-      if(!confirm('Delete this message?')) return;
+      if (!confirm('Move this message to Trash?')) return;
       try {
-        const res = await fetch(API_BASE + '/api/messages/' + id, { method: 'DELETE', headers: { 'Authorization': 'Basic ' + currentAuth } });
-        const txt = await res.text().catch(()=>null);
-        if (!res.ok) {
-          console.error('Delete failed', res.status, txt);
-          return alert('Delete failed: ' + (txt || res.status));
-        }
-        // After successful soft-delete, refresh the current view (do not auto-switch to Deleted)
+        const res = await fetch(API_BASE + '/' + id, { method: 'DELETE', headers: {'Content-Type':'application/json'}, body: JSON.stringify({ admin: 'admin' }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Delete failed');
+        alert('Message moved to Trash');
         loadMessages();
       } catch (err) {
-        console.error('Delete error', err);
-        alert('Delete error. See console.');
+        console.error(err);
+        alert(err.message);
       }
     }
 
     async function restoreMessage(id) {
-      if (!currentAuth) return alert('Login first');
-      const res = await fetch(API_BASE + '/api/messages/' + id + '/restore', { method: 'POST', headers: { 'Authorization': 'Basic ' + currentAuth } });
-      if (!res.ok) return alert('Restore failed');
-      loadMessages();
+      if (!confirm('Restore this message to Inbox?')) return;
+      try {
+        const res = await fetch(API_BASE + '/' + id + '/restore', { method: 'POST' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Restore failed');
+        alert('Message restored');
+        loadDeletedMessages();
+        loadMessages();
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
     }
-    logoutBtn.addEventListener('click', () => { logout(); messagesTbody.innerHTML = '<tr><td colspan="4" class="small muted">Logged out</td></tr>'; });
 
-    // Allow pressing Enter inside password to submit
-    qs('#adminPass').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loginSubmit.click(); });
+    async function permanentDelete(id) {
+      if (!confirm('Permanently delete this message? This cannot be undone.')) return;
+      try {
+        const res = await fetch(API_BASE + '/' + id + '/permanent', { method: 'DELETE' });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Permanent delete failed');
+        alert('Message permanently deleted');
+        loadDeletedMessages();
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
+    }
 
-    // initial state
-    adminLoggedIn.style.display='none';
-    adminLoggedOut.style.display='block';
+    function viewMessage(id) {
+      // simple approach: open message details in prompt (or implement modal)
+      alert('Open message details in developer tools or implement modal.');
+    }
+
+    // small helper and XSS safe escape
+    function escapeHtml(str) {
+      if (!str && str !== 0) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+
+    // send a test message (contact form simulation)
+    async function sendTestMessage() {
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const subject = document.getElementById('subject').value.trim();
+      const message = document.getElementById('message').value.trim();
+      if (!name || !message) return alert('Name and message required');
+      try {
+        const res = await fetch(API_BASE, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Failed to send');
+        alert('Message saved');
+        document.getElementById('name').value='';
+        document.getElementById('email').value='';
+        document.getElementById('subject').value='';
+        document.getElementById('message').value='';
+        showTab('inbox');
+      } catch (err) {
+        console.error(err);
+        alert(err.message);
+      }
+    }
+
+    // initial load
+    loadMessages();
   </script>
-
-  <!-- Usage notes:
-    1) Set API_BASE to your backend URL.
-    2) Server must implement POST /api/contact and GET /api/messages (protected by Basic Auth).
-    3) Ensure .env ORIGIN matches your Live Server origin (http://127.0.0.1:5500).
-  -->
 </body>
 </html>
