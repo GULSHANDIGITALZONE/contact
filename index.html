@@ -203,7 +203,7 @@
     const status = qs('#formStatus');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
-      status.textContent = 'Sending...';
+      status.textContent = 'Please wait Sending...';
       try {
         const payload = {
           name: form.name.value.trim(),
@@ -231,7 +231,7 @@
         // success if HTTP 2xx (res.ok) OR server returned success flag
         if (res.ok || (body && body.success)) {
           // show centered green toast for 2 seconds
-          showToast('success', 'Message sent. Thank you!', 5000);
+          showToast('success', 'Your message has been successfully received. We will take action shortly.', 5000);
           status.textContent = '';
           form.reset();
         } else {
