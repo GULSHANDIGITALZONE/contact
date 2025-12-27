@@ -231,7 +231,7 @@
         // success if HTTP 2xx (res.ok) OR server returned success flag
         if (res.ok || (body && body.success)) {
           // show centered green toast for 2 seconds
-          showToast('success', 'Your message has been successfully received. We will take action shortly.', 5000);
+          showToast('success', 'Your message has been successfully received.', 5000);
           status.textContent = '';
           form.reset();
         } else {
