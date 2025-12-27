@@ -52,19 +52,26 @@ app.post('/api/contact', async (req, res) => {
 // Auth middleware: verify Basic Auth against Admin collection (hashed password)
 async function requireAdmin(req, res, next) {
   try {
+    // Debug: log incoming Authorization header to help diagnose hosted auth issues
+    console.log('Auth header:', req.headers && req.headers.authorization);
     const user = basicAuth(req);
+    console.log('basic-auth parsed:', user);
     if (!user) {
       res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
+      console.warn('Auth: no credentials provided');
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
     const admin = await Admin.findOne({ username: user.name }).lean();
+    console.log('Auth: found admin record?', !!admin);
     if (!admin || !admin.passwordHash) {
       res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
+      console.warn('Auth: admin not found or missing passwordHash for', user.name);
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
     const ok = await bcrypt.compare(user.pass, admin.passwordHash);
     if (!ok) {
       res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
+      console.warn('Auth: password mismatch for', user.name);
       return res.status(401).json({ success: false, error: 'Unauthorized' });
     }
     return next();
