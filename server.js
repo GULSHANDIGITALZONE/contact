@@ -1,19 +1,17 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
-const path = require('path');
 const cors = require('cors');
-
-const Message = require('./messageModel'); // ensure correct path
 const basicAuth = require('basic-auth');
 const bcrypt = require('bcrypt');
+
+const Message = require('./messageModel');
 const Admin = require('./adminModel');
 
 const app = express();
 app.use(express.json());
 
-// CORS - set CLIENT_ORIGIN on Render to your Netlify URL, else '*' for testing
+/* -------------------- CORS -------------------- */
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || '*';
 app.use(cors({
   origin: CLIENT_ORIGIN,
@@ -21,124 +19,118 @@ app.use(cors({
   allowedHeaders: ['Content-Type','Authorization']
 }));
 
-// MongoDB connection
+/* -------------------- MONGODB -------------------- */
 const MONGO_URI = process.env.MONGO_URI || process.env.DATABASE_URL;
+
 mongoose.connect(MONGO_URI, {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log('MongoDB connected'))
-  .catch(err => console.error('MongoDB connection error:', err.message));
+})
+.then(async () => {
+  console.log('MongoDB connected');
+  await ensureAdmin(); // 🔥 MOST IMPORTANT
+})
+.catch(err => console.error('MongoDB connection error:', err));
 
-// ---------------- Routes ----------------
+/* -------------------- AUTO ADMIN CREATE -------------------- */
+async function ensureAdmin() {
+  const username = process.env.ADMIN_USER;
+  const password = process.env.ADMIN_PASS;
 
-// 1) Public contact endpoint used by frontend form
-// The frontend posts to /api/contact — we accept it and save (name, phone, message)
-app.post('/api/contact', async (req, res) => {
-  try {
-    const { name, phone, message } = req.body;
-    if (!name || !message) return res.status(400).json({ success: false, error: 'Name and message are required' });
-
-    const msg = new Message({ name, phone, message });
-    await msg.save();
-    return res.status(201).json({ success: true, data: msg });
-  } catch (err) {
-    console.error('Create (contact) error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+  if (!username || !password) {
+    console.log('ADMIN_USER / ADMIN_PASS not set');
+    return;
   }
-});
 
-// 2) GET messages (admin). Supports query ?deleted=true to return deleted items.
-// If deleted=true -> return deleted items; otherwise return non-deleted (inbox).
-// Auth middleware: verify Basic Auth against Admin collection (hashed password)
+  const hash = await bcrypt.hash(password, 12);
+
+  await Admin.findOneAndUpdate(
+    { username },
+    { username, passwordHash: hash },
+    { upsert: true, new: true }
+  );
+
+  console.log('Admin ensured:', username);
+}
+
+/* -------------------- AUTH MIDDLEWARE -------------------- */
 async function requireAdmin(req, res, next) {
   try {
-    // Debug: log incoming Authorization header to help diagnose hosted auth issues
-    console.log('Auth header:', req.headers && req.headers.authorization);
+    console.log('Auth header:', req.headers.authorization);
+
     const user = basicAuth(req);
     console.log('basic-auth parsed:', user);
+
     if (!user) {
-      res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
-      console.warn('Auth: no credentials provided');
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    const admin = await Admin.findOne({ username: user.name }).lean();
+
+    const admin = await Admin.findOne({ username: user.name });
     console.log('Auth: found admin record?', !!admin);
-    if (!admin || !admin.passwordHash) {
-      res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
-      console.warn('Auth: admin not found or missing passwordHash for', user.name);
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+
+    if (!admin) {
+      return res.status(401).json({ error: 'Unauthorized' });
     }
+
     const ok = await bcrypt.compare(user.pass, admin.passwordHash);
     if (!ok) {
-      res.set('WWW-Authenticate', 'Basic realm="Admin Area"');
-      console.warn('Auth: password mismatch for', user.name);
-      return res.status(401).json({ success: false, error: 'Unauthorized' });
+      return res.status(401).json({ error: 'Unauthorized' });
     }
-    return next();
+
+    next();
   } catch (err) {
-    console.error('Auth middleware error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
+    console.error('Auth error:', err);
+    res.status(500).json({ error: 'Server error' });
   }
 }
 
+/* -------------------- ROUTES -------------------- */
+
+// Public contact form
+app.post('/api/contact', async (req, res) => {
+  try {
+    const { name, phone, message } = req.body;
+    if (!name || !message) {
+      return res.status(400).json({ error: 'Name and message required' });
+    }
+
+    const msg = new Message({ name, phone, message });
+    await msg.save();
+    res.status(201).json({ success: true });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Admin: get messages
 app.get('/api/messages', requireAdmin, async (req, res) => {
-  try {
-    const wantDeleted = (req.query.deleted === 'true');
-    const filter = wantDeleted ? { deleted: true } : { deleted: { $ne: true } };
-    const messages = await Message.find(filter).sort({ createdAt: -1 });
-    return res.json(messages);
-  } catch (err) {
-    console.error('Get messages error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
-  }
+  const deleted = req.query.deleted === 'true';
+  const filter = deleted ? { deleted: true } : { deleted: { $ne: true } };
+  const messages = await Message.find(filter).sort({ createdAt: -1 });
+  res.json(messages);
 });
 
-// 3) Soft-delete: mark deleted=true and set deletedAt
+// Admin: delete message (soft delete)
 app.delete('/api/messages/:id', requireAdmin, async (req, res) => {
-  try {
-    const id = req.params.id;
-    if (!id) return res.status(400).json({ success: false, error: 'Invalid id' });
-
-    const updated = await Message.findByIdAndUpdate(
-      id,
-      { deleted: true, deletedAt: new Date() },
-      { new: true }
-    );
-
-    if (!updated) return res.status(404).json({ success: false, error: 'Message not found' });
-    return res.json({ success: true, message: 'Message moved to Trash', data: updated });
-  } catch (err) {
-    console.error('Delete error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
-  }
+  await Message.findByIdAndUpdate(req.params.id, {
+    deleted: true,
+    deletedAt: new Date()
+  });
+  res.json({ success: true });
 });
 
-// 4) Restore a message
+// Admin: restore message
 app.post('/api/messages/:id/restore', requireAdmin, async (req, res) => {
-  try {
-    const id = req.params.id;
-    const updated = await Message.findByIdAndUpdate(
-      id,
-      { deleted: false, deletedAt: null },
-      { new: true }
-    );
-    if (!updated) return res.status(404).json({ success: false, error: 'Message not found' });
-    return res.json({ success: true, message: 'Message restored', data: updated });
-  } catch (err) {
-    console.error('Restore error:', err);
-    return res.status(500).json({ success: false, error: 'Server error' });
-  }
+  await Message.findByIdAndUpdate(req.params.id, {
+    deleted: false,
+    deletedAt: null
+  });
+  res.json({ success: true });
 });
 
-// (Optional) permanent delete route if you ever want to remove completely
-// app.delete('/api/messages/:id/permanent', async (req, res) => { ... });
-
-// Serve static (if homepage is in this repo)
-app.use(express.static(path.join(__dirname, '/')));
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
-});
-
-// Start
+/* -------------------- START SERVER -------------------- */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => {
+  console.log('Server running on port', PORT);
+});
